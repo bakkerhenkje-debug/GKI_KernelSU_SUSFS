@@ -503,6 +503,16 @@ jobs:
         version: ${{ inputs.version }}
         bypass: true
 
+    - name: Enable Pixel NAS Kernel Config
+      uses: ./.github/actions/set-kernel-config
+      with:
+        config_list: |
+          CONFIG_KPROBES=y
+          CONFIG_MD=y
+          CONFIG_BLK_DEV_MD=y
+          CONFIG_MD_RAID1=y
+          CONFIG_MD_AUTODETECT=n
+
     - name: Build Normal Kernel
       env:
         SOURCE_DATE_EPOCH: ${{ env.SOURCE_DATE_EPOCH }}
