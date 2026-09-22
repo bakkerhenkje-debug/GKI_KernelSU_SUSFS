@@ -504,14 +504,38 @@ jobs:
         bypass: true
 
     - name: Enable Pixel NAS Kernel Config
-      uses: ./.github/actions/set-kernel-config
-      with:
-        config_list: |
-          CONFIG_KPROBES=y
-          CONFIG_MD=y
-          CONFIG_BLK_DEV_MD=y
-          CONFIG_MD_RAID1=y
-          CONFIG_MD_AUTODETECT=n
+      shell: bash
+      working-directory: ${{ github.workspace }}/kernel
+      run: |
+        cat >> common/build.config.gki <<'EOF'
+
+        function pixel_nas_config() {
+          echo "Applying Pixel NAS config to final .config"
+
+          ${KERNEL_DIR}/scripts/config --file ${OUT_DIR}/.config \
+            --enable KPROBES \
+            --enable MD \
+            --enable BLK_DEV_MD \
+            --enable MD_RAID1 \
+            --disable MD_AUTODETECT
+
+          (cd ${OUT_DIR} && \
+            make ${TOOL_ARGS} O=${OUT_DIR} olddefconfig)
+
+          echo "=== Pixel NAS final kernel config ==="
+
+          grep -E '^(CONFIG_KPROBES=|CONFIG_MD=|CONFIG_BLK_DEV_MD=|CONFIG_MD_RAID1=|# CONFIG_MD_AUTODETECT is not set)' \
+            ${OUT_DIR}/.config
+
+          grep -q '^CONFIG_KPROBES=y$' ${OUT_DIR}/.config
+          grep -q '^CONFIG_MD=y$' ${OUT_DIR}/.config
+          grep -q '^CONFIG_BLK_DEV_MD=y$' ${OUT_DIR}/.config
+          grep -q '^CONFIG_MD_RAID1=y$' ${OUT_DIR}/.config
+          grep -q '^# CONFIG_MD_AUTODETECT is not set$' ${OUT_DIR}/.config
+        }
+
+        POST_DEFCONFIG_CMDS="${POST_DEFCONFIG_CMDS:-} pixel_nas_config"
+        EOF
 
     - name: Build Normal Kernel
       env:
